@@ -49,7 +49,23 @@ async def api_usage_middleware(request: Request, call_next):
 
 @app.get("/health")
 async def health():
+    """Health check endpoint that doesn't require database connection."""
     return {"status": "ok", "version": "1.0.0"}
+
+
+@app.get("/health/db")
+async def health_db():
+    """Health check endpoint that tests database connection."""
+    try:
+        from app.db import get_connection
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                cur.fetchone()
+        return {"status": "ok", "database": "connected"}
+    except Exception as e:
+        logger.error(f"Database health check failed: {str(e)}")
+        return {"status": "error", "database": "disconnected", "error": str(e)}
 
 
 @app.get("/leaderboard")

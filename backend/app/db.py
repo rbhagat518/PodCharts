@@ -12,10 +12,6 @@ from psycopg_pool import ConnectionPool
 
 load_dotenv()
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is required")
-
 # Connection pool for better performance
 _pool: ConnectionPool | None = None
 
@@ -24,6 +20,10 @@ def get_pool() -> ConnectionPool:
     """Get or create the connection pool."""
     global _pool
     if _pool is None:
+        DATABASE_URL = os.environ.get("DATABASE_URL")
+        if not DATABASE_URL:
+            raise RuntimeError("DATABASE_URL is required. Please set it in Vercel environment variables.")
+        
         _pool = ConnectionPool(
             DATABASE_URL,
             min_size=1,
