@@ -13,6 +13,7 @@ from psycopg import connect
 # Import the ingestion functions
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.ingest import (
+    LISTENNOTES_BASE_URL,
     DEFAULT_CATEGORIES,
     fetch_category,
     upsert_podcasts,

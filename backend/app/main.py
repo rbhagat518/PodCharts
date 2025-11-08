@@ -109,6 +109,14 @@ async def get_leaderboard(
                     """
                     params: list[Any] = [start_date, today]
                 else:
+                    # For daily interval, try today first, then fall back to latest available date
+                    cursor.execute("SELECT MAX(captured_on) as latest_date FROM metrics_daily")
+                    latest_date_row = cursor.fetchone()
+                    latest_date = latest_date_row["latest_date"] if latest_date_row and latest_date_row["latest_date"] else today
+                    
+                    # Use latest available date if today has no data
+                    query_date = today if latest_date == today else latest_date
+                    
                     query = """
                         SELECT 
                             p.id,
@@ -125,7 +133,7 @@ async def get_leaderboard(
                         JOIN podcasts p ON p.id = m.podcast_id
                         WHERE m.captured_on = %s
                     """
-                    params: list[Any] = [today]
+                    params: list[Any] = [query_date]
                 
                 if category:
                     query += " AND p.category = %s"
@@ -181,13 +189,16 @@ async def get_leaderboard(
                     for row in rows
                 ]
                 
+                # Use the actual date from the query (might be latest available if today has no data)
+                actual_date = query_date.isoformat() if hasattr(query_date, 'isoformat') else str(query_date)
+                
                 return {
                     "category": category,
                     "country": country or "all",
                     "interval": interval,
                     "sort_by": sort_by,
                     "search": search,
-                    "captured_on": today.isoformat(),
+                    "captured_on": actual_date,
                     "items": items,
                 }
     except Exception as e:
@@ -209,6 +220,13 @@ async def get_trending(
     try:
         with get_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
+                # Try today first, then fall back to latest available date
+                cursor.execute("SELECT MAX(captured_on) as latest_date FROM metrics_daily")
+                latest_date_row = cursor.fetchone()
+                latest_date = latest_date_row["latest_date"] if latest_date_row and latest_date_row["latest_date"] else today
+                query_date = today if latest_date == today else latest_date
+                
+                # First, try to get podcasts with positive momentum/deltas
                 query = """
                     SELECT 
                         p.id,
@@ -224,20 +242,51 @@ async def get_trending(
                     FROM metrics_daily m
                     JOIN podcasts p ON p.id = m.podcast_id
                     WHERE m.captured_on = %s
-                    AND m.momentum_score IS NOT NULL
-                    AND m.momentum_score > 0
+                    AND (m.momentum_score IS NOT NULL AND m.momentum_score > 0 
+                         OR m.delta_7d IS NOT NULL AND m.delta_7d > 0
+                         OR m.delta_30d IS NOT NULL AND m.delta_30d > 0)
                 """
-                params: list[Any] = [today]
+                params: list[Any] = [query_date]
                 
                 if category:
                     query += " AND p.category = %s"
                     params.append(category)
                 
-                query += " ORDER BY m.momentum_score DESC, m.delta_7d DESC NULLS LAST LIMIT %s"
+                query += " ORDER BY m.momentum_score DESC NULLS LAST, m.delta_7d DESC NULLS LAST, m.rank ASC LIMIT %s"
                 params.append(limit)
                 
                 cursor.execute(query, params)
                 rows = cursor.fetchall()
+                
+                # If no trending data (first day), show top-ranked podcasts instead
+                if not rows:
+                    query = """
+                        SELECT 
+                            p.id,
+                            p.title,
+                            p.publisher,
+                            p.category,
+                            p.country,
+                            m.rank,
+                            m.delta_7d,
+                            m.delta_30d,
+                            m.momentum_score,
+                            m.captured_on
+                        FROM metrics_daily m
+                        JOIN podcasts p ON p.id = m.podcast_id
+                        WHERE m.captured_on = %s
+                    """
+                    params = [query_date]
+                    
+                    if category:
+                        query += " AND p.category = %s"
+                        params.append(category)
+                    
+                    query += " ORDER BY m.rank ASC LIMIT %s"
+                    params.append(limit)
+                    
+                    cursor.execute(query, params)
+                    rows = cursor.fetchall()
                 
                 items = [
                     {
@@ -249,14 +298,21 @@ async def get_trending(
                         "rank": row["rank"],
                         "delta_7d": row["delta_7d"],
                         "delta_30d": row["delta_30d"],
-                        "momentum_score": float(row["momentum_score"]),
+                        "momentum_score": float(row["momentum_score"]) if row["momentum_score"] is not None else None,
                     }
                     for row in rows
                 ]
                 
+                # Use the actual date from the query
+                cursor.execute("SELECT MAX(captured_on) as latest_date FROM metrics_daily")
+                latest_date_row = cursor.fetchone()
+                latest_date = latest_date_row["latest_date"] if latest_date_row and latest_date_row["latest_date"] else today
+                query_date = today if latest_date == today else latest_date
+                actual_date = query_date.isoformat() if hasattr(query_date, 'isoformat') else str(query_date)
+                
                 return {
                     "category": category,
-                    "captured_on": today.isoformat(),
+                    "captured_on": actual_date,
                     "items": items,
                 }
     except Exception as e:
