@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "api/test.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "[email protected]"
+      }
     }
   ],
   "routes": [
@@ -12,11 +15,6 @@
       "dest": "api/test.py"
     }
   ],
-  "functions": {
-    "api/test.py": {
-      "runtime": "[email protected]"
-    }
-  },
   "env": {
     "PYTHONUNBUFFERED": "1"
   }
