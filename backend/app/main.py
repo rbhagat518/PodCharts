@@ -57,15 +57,46 @@ async def health():
 async def health_db():
     """Health check endpoint that tests database connection."""
     try:
+        import os
         from app.db import get_connection
+        
+        # Check if DATABASE_URL is set
+        db_url = os.environ.get("DATABASE_URL")
+        if not db_url:
+            return {
+                "status": "error",
+                "database": "disconnected",
+                "error": "DATABASE_URL environment variable is not set",
+                "hint": "Please add DATABASE_URL in Vercel environment variables"
+            }
+        
+        # Try to get connection
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
                 cur.fetchone()
         return {"status": "ok", "database": "connected"}
+    except RuntimeError as e:
+        # DATABASE_URL missing or connection pool error
+        logger.error(f"Database health check failed (RuntimeError): {str(e)}")
+        return {
+            "status": "error",
+            "database": "disconnected",
+            "error": str(e),
+            "type": "RuntimeError"
+        }
     except Exception as e:
-        logger.error(f"Database health check failed: {str(e)}")
-        return {"status": "error", "database": "disconnected", "error": str(e)}
+        # Other database connection errors
+        logger.error(f"Database health check failed: {type(e).__name__}: {str(e)}")
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Traceback: {error_trace}")
+        return {
+            "status": "error",
+            "database": "disconnected",
+            "error": str(e),
+            "type": type(e).__name__
+        }
 
 
 @app.get("/leaderboard")

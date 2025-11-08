@@ -24,12 +24,17 @@ def get_pool() -> ConnectionPool:
         if not DATABASE_URL:
             raise RuntimeError("DATABASE_URL is required. Please set it in Vercel environment variables.")
         
-        _pool = ConnectionPool(
-            DATABASE_URL,
-            min_size=1,
-            max_size=10,
-        )
-        _pool.open()
+        try:
+            _pool = ConnectionPool(
+                DATABASE_URL,
+                min_size=1,
+                max_size=10,
+            )
+            _pool.open()
+        except Exception as e:
+            # Log the error but don't keep a broken pool
+            _pool = None
+            raise RuntimeError(f"Failed to create database connection pool: {str(e)}")
     return _pool
 
 
