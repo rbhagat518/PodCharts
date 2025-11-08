@@ -13,6 +13,9 @@ type LeaderboardItem = {
   momentum_score: number | null;
 };
 
+// Force dynamic rendering to avoid build-time fetch
+export const dynamic = 'force-dynamic';
+
 async function fetchLeaderboard(
   category?: string,
   country?: string,
@@ -30,13 +33,12 @@ async function fetchLeaderboard(
     if (interval) params.set("interval", interval);
     const url = `${base}/leaderboard${params.toString() ? `?${params}` : ""}`;
     const res = await fetch(url, { 
-      next: { revalidate: 60 },
-      cache: "no-store"
+      cache: "no-store" // Dynamic page, don't cache
     });
     if (!res.ok) return { items: [] };
     return res.json();
   } catch (error) {
-    console.warn("Failed to fetch leaderboard during build:", error);
+    console.warn("Failed to fetch leaderboard:", error);
     return { items: [] };
   }
 }

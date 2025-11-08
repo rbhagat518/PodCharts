@@ -13,6 +13,9 @@ type TrendingItem = {
   momentum_score: number | null;
 };
 
+// Force dynamic rendering to avoid build-time fetch
+export const dynamic = 'force-dynamic';
+
 async function fetchTrending(category?: string) {
   try {
     const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
@@ -20,13 +23,12 @@ async function fetchTrending(category?: string) {
     if (category) params.set("category", category);
     const url = `${base}/trending${params.toString() ? `?${params}` : ""}`;
     const res = await fetch(url, { 
-      next: { revalidate: 60 },
-      cache: "no-store"
+      cache: "no-store" // Dynamic page, don't cache
     });
     if (!res.ok) return { items: [] };
     return res.json();
   } catch (error) {
-    console.warn("Failed to fetch trending during build:", error);
+    console.warn("Failed to fetch trending:", error);
     return { items: [] };
   }
 }

@@ -37,11 +37,13 @@ async function fetchCompare(id1: string, id2: string): Promise<CompareData | nul
   try {
     const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
     const params = new URLSearchParams({ id1, id2 });
-    const res = await fetch(`${base}/compare?${params}`, { cache: "no-store" });
+    const res = await fetch(`${base}/compare?${params}`, { 
+      cache: "no-store" // Client-side fetch, don't cache
+    });
     if (!res.ok) return null;
     return res.json();
   } catch (error) {
-    console.warn("Failed to fetch compare during build:", error);
+    console.warn("Failed to fetch compare:", error);
     return null;
   }
 }

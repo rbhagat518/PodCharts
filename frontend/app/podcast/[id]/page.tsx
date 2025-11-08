@@ -1,14 +1,16 @@
 import Link from "next/link";
 import PodcastClient from "./podcast-client";
 
+// Force dynamic rendering to avoid build-time fetch
+export const dynamic = 'force-dynamic';
+
 type Props = { params: { id: string } };
 
 async function fetchPodcast(id: string) {
   try {
     const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
     const res = await fetch(`${base}/podcast/${id}`, { 
-      next: { revalidate: 60 },
-      cache: "no-store"
+      cache: "no-store" // Dynamic page, don't cache
     });
     if (!res.ok) {
       if (res.status === 404) return null;
@@ -16,7 +18,7 @@ async function fetchPodcast(id: string) {
     }
     return res.json();
   } catch (error) {
-    console.warn("Failed to fetch podcast during build:", error);
+    console.warn("Failed to fetch podcast:", error);
     return null;
   }
 }

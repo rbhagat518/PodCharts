@@ -1,18 +1,19 @@
 import Link from "next/link";
 
+// Force dynamic rendering to avoid build-time fetch
+export const dynamic = 'force-dynamic';
+
 async function fetchTrending() {
   try {
     const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
     const res = await fetch(`${base}/trending?limit=10`, { 
-      next: { revalidate: 60 },
-      // Don't fail build if API is unavailable
-      cache: "no-store"
+      cache: "no-store" // Dynamic page, don't cache
     });
     if (!res.ok) return { items: [] };
     return res.json();
   } catch (error) {
     // During build, API might not be available - return empty data
-    console.warn("Failed to fetch trending during build:", error);
+    console.warn("Failed to fetch trending:", error);
     return { items: [] };
   }
 }
