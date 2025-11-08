@@ -6,6 +6,9 @@ authors = ["PodCharts <dev@podcharts.xyz>"]
 readme = "README.md"
 packages = [{ include = "app" }]
 
+[project]
+requires-python = ">=3.11,<3.12"
+
 [tool.poetry.dependencies]
 python = "^3.11"
 fastapi = "^0.115.0"
