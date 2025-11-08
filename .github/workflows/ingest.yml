@@ -32,6 +32,17 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           LISTENNOTES_API_KEY: ${{ secrets.LISTENNOTES_API_KEY }}
-        run: poetry run python scripts/ingest.py
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "❌ Error: DATABASE_URL secret is not set"
+            echo "Please add DATABASE_URL secret in: https://github.com/rbhagat518/PodCharts/settings/secrets/actions"
+            exit 1
+          fi
+          if [ -z "$LISTENNOTES_API_KEY" ]; then
+            echo "❌ Error: LISTENNOTES_API_KEY secret is not set"
+            echo "Please add LISTENNOTES_API_KEY secret in: https://github.com/rbhagat518/PodCharts/settings/secrets/actions"
+            exit 1
+          fi
+          poetry run python scripts/ingest.py
 
 
