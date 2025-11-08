@@ -34,11 +34,16 @@ type CompareData = {
 };
 
 async function fetchCompare(id1: string, id2: string): Promise<CompareData | null> {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-  const params = new URLSearchParams({ id1, id2 });
-  const res = await fetch(`${base}/compare?${params}`, { cache: "no-store" });
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+    const params = new URLSearchParams({ id1, id2 });
+    const res = await fetch(`${base}/compare?${params}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch (error) {
+    console.warn("Failed to fetch compare during build:", error);
+    return null;
+  }
 }
 
 type Props = {

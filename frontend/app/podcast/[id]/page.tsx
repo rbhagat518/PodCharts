@@ -4,13 +4,21 @@ import PodcastClient from "./podcast-client";
 type Props = { params: { id: string } };
 
 async function fetchPodcast(id: string) {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-  const res = await fetch(`${base}/podcast/${id}`, { next: { revalidate: 60 } });
-  if (!res.ok) {
-    if (res.status === 404) return null;
+  try {
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+    const res = await fetch(`${base}/podcast/${id}`, { 
+      next: { revalidate: 60 },
+      cache: "no-store"
+    });
+    if (!res.ok) {
+      if (res.status === 404) return null;
+      return null;
+    }
+    return res.json();
+  } catch (error) {
+    console.warn("Failed to fetch podcast during build:", error);
     return null;
   }
-  return res.json();
 }
 
 export default async function PodcastPage({ params }: Props) {
