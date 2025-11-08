@@ -31,10 +31,7 @@ jobs:
       - name: Run ingestion
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
           LISTENNOTES_API_KEY: ${{ secrets.LISTENNOTES_API_KEY }}
-          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
-          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
         run: poetry run python scripts/ingest.py
 
 
