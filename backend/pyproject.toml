@@ -2,6 +2,7 @@
 name = "podcharts-backend"
 version = "0.1.0"
 description = "FastAPI backend for PodCharts"
+# Using Poetry format - no [project] section
 authors = ["PodCharts <dev@podcharts.xyz>"]
 readme = "README.md"
 packages = [{ include = "app" }]
