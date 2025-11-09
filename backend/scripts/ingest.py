@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any, Iterable
@@ -71,6 +72,7 @@ def fetch_category(
     region: str,
     limit: int,
     captured_on: date,
+    max_retries: int = 3,
 ) -> list[RankedPodcast]:
     params: dict[str, Any] = {
         "page": 1,
@@ -81,10 +83,33 @@ def fetch_category(
     if genre_id is not None:
         params["genre_id"] = genre_id
 
-    response = client.get("/best_podcasts", params=params, timeout=30.0)
-    response.raise_for_status()
-    payload = response.json()
-    podcasts = payload.get("podcasts", [])
+    for attempt in range(max_retries):
+        try:
+            response = client.get("/best_podcasts", params=params, timeout=30.0)
+            response.raise_for_status()
+            payload = response.json()
+            podcasts = payload.get("podcasts", [])
+            break
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 429:
+                # Rate limited - wait and retry
+                if attempt < max_retries - 1:
+                    wait_time = (2 ** attempt) * 5  # Exponential backoff: 5s, 10s, 20s
+                    logging.warning(
+                        "Rate limited for %s (%s), waiting %s seconds before retry %s/%s",
+                        category_slug, region, wait_time, attempt + 1, max_retries
+                    )
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    logging.error(
+                        "Rate limited for %s (%s) after %s retries, skipping",
+                        category_slug, region, max_retries
+                    )
+                    raise
+            else:
+                # Other HTTP errors - raise immediately
+                raise
 
     ranked: list[RankedPodcast] = []
     for idx, item in enumerate(podcasts, start=1):
@@ -252,8 +277,12 @@ def main() -> None:
                             limit=settings["limit"],
                             captured_on=captured_on,
                         )
+                        # Add delay between requests to avoid rate limiting
+                        time.sleep(1)  # 1 second delay between category fetches
                     except httpx.HTTPStatusError as exc:
                         logging.error("Failed to fetch %s (%s): %s", slug, region, exc)
+                        # Wait longer on errors to avoid further rate limiting
+                        time.sleep(5)
                         continue
 
                     if not records:
